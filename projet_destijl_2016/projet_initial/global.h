@@ -19,6 +19,7 @@ extern RT_TASK tenvoyer;
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
 extern RT_MUTEX mutexMove;
+extern RT_MUTEX mutexCompteurRecep;
 
 /* @descripteurs des sempahore */
 extern RT_SEM semConnecterRobot;
@@ -28,6 +29,7 @@ extern RT_QUEUE queueMsgGUI;
 
 /* @variables partagées */
 extern int etatCommMoniteur;
+extern int compteur_erreur_recep;
 extern int etatCommRobot;
 extern DServer *serveur;
 extern DRobot *robot;

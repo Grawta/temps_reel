@@ -13,12 +13,13 @@ RT_TASK tmove;
 RT_TASK tenvoyer;
 
 RT_MUTEX mutexEtat;
+RT_MUTEX mutexCompteurRecep;
 RT_MUTEX mutexMove;
 
 RT_SEM semConnecterRobot;
 
 RT_QUEUE queueMsgGUI;
-
+int compteur_erreur_recep = 0;
 int etatCommMoniteur = 1;
 int etatCommRobot = 1;
 DRobot *robot;

@@ -17,7 +17,7 @@ void envoyer(void * arg) {
         }
     }
 }
-
+//Le connecter ne réussit pas à tous les coups on a de la chance avec le robot 07
 void connecter(void * arg) {
     int status;
     DMessage *message;
@@ -53,11 +53,13 @@ void connecter(void * arg) {
     }
 }
 
+
+//On rajoute un compteur de perte de message (compteur_erreur_recep) si il dépasse une certaine valeur on considère une perte de connexion vers le robot
 void communiquer(void *arg) {
     DMessage *msg = d_new_message();
     int var1 = 1;
     int num_msg = 0;
-
+    
     rt_printf("tserver : Début de l'exécution de serveur\n");
     serveur->open(serveur, "8000");
     rt_printf("tserver : Connexion\n");
@@ -65,7 +67,7 @@ void communiquer(void *arg) {
     rt_mutex_acquire(&mutexEtat, TM_INFINITE);
     etatCommMoniteur = 0;
     rt_mutex_release(&mutexEtat);
-
+   
     while (var1 > 0) {
         rt_printf("tserver : Attente d'un message\n");
         var1 = serveur->receive(serveur, msg);
@@ -92,15 +94,23 @@ void communiquer(void *arg) {
                     move->print(move);
                     rt_mutex_release(&mutexMove);
                     break;
+                    
+                    //On regarde si on a recu un STATE dans ce cas on sait qu'il y a une erreur on va donc reconnecter le robot
+                case MESSAGE_TYPE_STATE :
+                    rt_printf("tserver : Reconnection du robot\n");
+                    rt_sem_v(&semConnecterRobot);
+                    break;
             }
-        }
+                 
     }
+}
 }
 
 void deplacer(void *arg) {
     int status = 1;
     int gauche;
     int droite;
+    int compteur_erreur_recep;
     DMessage *message;
 
     rt_printf("tmove : Debut de l'éxecution de periodique à 1s\n");
@@ -144,19 +154,30 @@ void deplacer(void *arg) {
             status = robot->set_motors(robot, gauche, droite);
 
             if (status != STATUS_OK) {
-                rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-                etatCommRobot = status;
-                rt_mutex_release(&mutexEtat);
+                      //On test la reception (PENSER a faire le passage du compteur en global avec un mutex et augmenter sa valeur car plusieurs thread vont tester ce compteur)
+                  rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+                 
+                  if (compteur_erreur_recep <3){
+                      compteur_erreur_recep ++;
 
-                message = d_new_message();
-                message->put_state(message, status);
+                  }else{
+                      compteur_erreur_recep =0;
+                      rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+                      etatCommRobot = status;
+                      rt_mutex_release(&mutexEtat);
 
-                rt_printf("tmove : Envoi message\n");
-                if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
-                    message->free(message);
+                      message = d_new_message();
+                      message->put_state(message, status);
+
+                      rt_printf("tmove : Envoi message\n");
+                      if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                          message->free(message);
+                      }
+
+                  }
+                   rt_mutex_release(&mutexEtat);
                 }
             }
-        }
     }
 }
 
