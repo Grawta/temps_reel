@@ -18,6 +18,7 @@ void envoyer(void * arg) {
     }
 }
 //Le connecter ne réussit pas à tous les coups on a de la chance avec le robot 07
+
 void connecter(void * arg) {
     int status;
     DMessage *message;
@@ -36,7 +37,7 @@ void connecter(void * arg) {
 
         if (status == STATUS_OK) {
             status = robot->start_insecurely(robot);
-            if (status == STATUS_OK){
+            if (status == STATUS_OK) {
                 rt_printf("tconnect : Robot démarrer\n");
             }
         }
@@ -54,50 +55,52 @@ void connecter(void * arg) {
 }
 
 
-//On rajoute un compteur de perte de message (compteur_erreur_recep) si il dépasse une certaine valeur on considère une perte de connexion vers le robot
+//reconnexion au serveur si perte de connexion ( var <1)
+
 void communiquer(void *arg) {
     DMessage *msg = d_new_message();
-    int var1 = 1;
-    int num_msg = 0;
     
-    rt_printf("tserver : Début de l'exécution de serveur\n");
-    serveur->open(serveur, "8000");
-    rt_printf("tserver : Connexion\n");
+    int num_msg = 0;
+    while (1) {
+        rt_printf("tserver : Début de l'exécution de serveur\n");
+        serveur->open(serveur, "8000");
+        rt_printf("tserver : Connexion\n");
 
-    rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-    etatCommMoniteur = 0;
-    rt_mutex_release(&mutexEtat);
-   
-    while (var1 > 0) {
-        rt_printf("tserver : Attente d'un message\n");
-        var1 = serveur->receive(serveur, msg);
-        num_msg++;
-        if (var1 > 0) {
-            switch (msg->get_type(msg)) {
-                case MESSAGE_TYPE_ACTION:
-                    rt_printf("tserver : Le message %d reçu est une action\n",
-                            num_msg);
-                    DAction *action = d_new_action();
-                    action->from_message(action, msg);
-                    switch (action->get_order(action)) {
-                        case ACTION_CONNECT_ROBOT:
-                            rt_printf("tserver : Action connecter robot\n");
-                            rt_sem_v(&semConnecterRobot);
-                            break;
-                    }
-                    break;
-                case MESSAGE_TYPE_MOVEMENT:
-                    rt_printf("tserver : Le message reçu %d est un mouvement\n",
-                            num_msg);
-                    rt_mutex_acquire(&mutexMove, TM_INFINITE);
-                    move->from_message(move, msg);
-                    move->print(move);
-                    rt_mutex_release(&mutexMove);
-                    break;
+        rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+        etatCommMoniteur = 0;
+        rt_mutex_release(&mutexEtat);
+        int var1 = 1;
+        while (var1 > 0) {
+            rt_printf("tserver : Attente d'un message\n");
+            var1 = serveur->receive(serveur, msg);
+            num_msg++;
+            if (var1 > 0) {
+                switch (msg->get_type(msg)) {
+                    case MESSAGE_TYPE_ACTION:
+                        rt_printf("tserver : Le message %d reçu est une action\n",
+                                num_msg);
+                        DAction *action = d_new_action();
+                        action->from_message(action, msg);
+                        switch (action->get_order(action)) {
+                            case ACTION_CONNECT_ROBOT:
+                                rt_printf("tserver : Action connecter robot\n");
+                                rt_sem_v(&semConnecterRobot);
+                                break;
+                        }
+                        break;
+                    case MESSAGE_TYPE_MOVEMENT:
+                        rt_printf("tserver : Le message reçu %d est un mouvement\n",
+                                num_msg);
+                        rt_mutex_acquire(&mutexMove, TM_INFINITE);
+                        move->from_message(move, msg);
+                        move->print(move);
+                        rt_mutex_release(&mutexMove);
+                        break;
+                }
+
             }
-                 
+        }
     }
-}
 }
 
 void deplacer(void *arg) {
@@ -148,32 +151,32 @@ void deplacer(void *arg) {
             status = robot->set_motors(robot, gauche, droite);
             rt_mutex_acquire(&mutexEtat, TM_INFINITE);
             if (status != STATUS_OK) {
-                      //On test la reception 
-                
-                 
-                  if (compteur_erreur_recep <3){
-                      compteur_erreur_recep ++;
+                //On test la reception 
 
-                  }else{
-                      compteur_erreur_recep =0;
-                      rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-                      etatCommRobot = status;
-                      rt_mutex_release(&mutexEtat);
 
-                      message = d_new_message();
-                      message->put_state(message, status);
+                if (compteur_erreur_recep < 3) {
+                    compteur_erreur_recep++;
 
-                      rt_printf("tmove : Envoi message\n");
-                      if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
-                          message->free(message);
-                      }
+                } else {
+                    compteur_erreur_recep = 0;
+                    rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+                    etatCommRobot = status;
+                    rt_mutex_release(&mutexEtat);
 
-                  }
-            }else{
-                compteur_erreur_recep =0;
+                    message = d_new_message();
+                    message->put_state(message, status);
+
+                    rt_printf("tmove : Envoi message\n");
+                    if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                        message->free(message);
+                    }
+
+                }
+            } else {
+                compteur_erreur_recep = 0;
             }
             rt_mutex_release(&mutexEtat);
-            }
+        }
     }
 }
 
