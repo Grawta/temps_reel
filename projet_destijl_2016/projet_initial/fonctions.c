@@ -94,12 +94,6 @@ void communiquer(void *arg) {
                     move->print(move);
                     rt_mutex_release(&mutexMove);
                     break;
-                    
-                    //On regarde si on a recu un STATE dans ce cas on sait qu'il y a une erreur on va donc reconnecter le robot
-                case MESSAGE_TYPE_STATE :
-                    rt_printf("tserver : Reconnection du robot\n");
-                    rt_sem_v(&semConnecterRobot);
-                    break;
             }
                  
     }
@@ -152,10 +146,10 @@ void deplacer(void *arg) {
             rt_mutex_release(&mutexMove);
 
             status = robot->set_motors(robot, gauche, droite);
-
+            rt_mutex_acquire(&mutexEtat, TM_INFINITE);
             if (status != STATUS_OK) {
-                      //On test la reception (PENSER a faire le passage du compteur en global avec un mutex et augmenter sa valeur car plusieurs thread vont tester ce compteur)
-                  rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+                      //On test la reception 
+                
                  
                   if (compteur_erreur_recep <3){
                       compteur_erreur_recep ++;
@@ -175,8 +169,10 @@ void deplacer(void *arg) {
                       }
 
                   }
-                   rt_mutex_release(&mutexEtat);
-                }
+            }else{
+                compteur_erreur_recep =0;
+            }
+            rt_mutex_release(&mutexEtat);
             }
     }
 }
