@@ -22,7 +22,6 @@ void envoyer(void * arg) {
 void connecter(void * arg) {
     int status;
     DMessage *message;
-    long *mask = 1;
     rt_printf("tconnect : Debut de l'exécution de tconnect\n");
 
     while (1) {
@@ -51,7 +50,7 @@ void connecter(void * arg) {
         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
             message->free(message);
         }
-        rt_event_signal(&evCoPerdue,&mask);
+        rt_event_signal(&evCoPerdue,1);
         rt_mutex_acquire(&mutexInitConnexion,TM_INFINITE);
         initConnexion = 1;
         rt_mutex_release(&mutexInitConnexion);
@@ -210,14 +209,9 @@ void battery(void * arg){
     /* Attente de l'activation périodique */
     rt_task_wait_period(NULL);
     rt_printf("tbattery : Activation périodique\n");
-    /*IL FAUT QUON IMPLEMENTE LES EVENT ICI A LA PLACE DU SEMAPHORE*/
+    /*Event pour savoir si on est bien co*/
     rt_event_wait(&evCoPerdue,1,NULL,EV_ALL,TM_INFINITE);
-    /*On test si le robot est pas deco*/
-    /*rt_printf("tbattery : Attente du sémarphore semCoPerdue\n");
-    rt_sem_p(&semCoPerdue, TM_INFINITE);
-    rt_printf("tbattery : On a le sémaphore de la Connexion on test la batterie\n");*/
-    
-    
+     
     /*On vérifie le status de la Co Robot*/
     rt_mutex_acquire(&mutexEtat, TM_INFINITE);
     status = etatCommRobot;
@@ -240,5 +234,34 @@ void battery(void * arg){
             compteur_erreur_recep++;
     }
      rt_mutex_release(&mutexCompteurRecep);
+    }
+}
+
+
+void watchdog(void *arg){
+    int comRobot;
+    int comMoniteur;
+    int status;
+    rt_mutex_acquire(&mutexInitConnexion,TM_INFINITE);
+    if(initConnexion==1){
+        rt_printf("twatchdog : Debut de l'éxecution de periodique à 1s\n");
+        rt_task_set_periodic(NULL,TM_NOW,1000000000);
+    }
+    rt_event_wait(&evCoPerdue,1,NULL,EV_ALL,TM_INFINITE);
+    /* Attente de l'activation périodique */
+    rt_task_wait_period(NULL);
+    rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+    comRobot = etatCommRobot;
+    comMoniteur = etatCommMoniteur;
+    rt_mutex_release(&mutexEtat);
+    if((comRobot+comMoniteur)==0){
+        status = robot->reload_wdt(robot);
+        rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
+        if (status != STATUS_OK) {
+            compteur_erreur_recep++;
+        }else{
+            compteur_erreur_recep =0;
+        }
+        rt_mutex_release(&mutexCompteurRecep);
     }
 }
