@@ -19,6 +19,7 @@ extern RT_TASK tbattery;
 extern RT_TASK tcoperdue;
 extern RT_TASK twatchdog;
 extern RT_TASK tarena;
+extern RT_TASK tphoto;
 
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
@@ -59,6 +60,7 @@ extern int PRIORITY_TBATTERY;
 extern int PRIORITY_TWATCHDOG;
 extern int PRIORITY_TCOPERDUE;
 extern int PRIORITY_TARENE;
+extern int PRIORITY_TPHOTO;
 
 #endif	/* GLOBAL_H */
 

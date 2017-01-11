@@ -136,6 +136,10 @@ void initStruct(void) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_create(&tphoto, NULL, 0, PRIORITY_TPHOTO, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
 
     /* Creation des files de messages */
     if (err = rt_queue_create(&queueMsgGUI, "toto", MSG_QUEUE_SIZE*sizeof(DMessage), MSG_QUEUE_SIZE, Q_FIFO)){
@@ -184,6 +188,10 @@ void startTasks() {
         exit(EXIT_FAILURE);
     }
      if (err = rt_task_start(&tarena, &th_arene, NULL)) {
+        rt_printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&photo, &photo, NULL)) {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
