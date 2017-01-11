@@ -62,7 +62,6 @@ void connecter(void * arg) {
 
 void communiquer(void *arg) {
     DMessage *msg = d_new_message();
-    
     int num_msg = 0;
     while (1) {
         rt_printf("tserver : Début de l'exécution de serveur\n");
@@ -100,7 +99,6 @@ void communiquer(void *arg) {
                         rt_mutex_release(&mutexMove);
                         break;
                 }
-
             }
         }
     }
@@ -120,6 +118,7 @@ void deplacer(void *arg) {
         rt_task_wait_period(NULL);
         rt_printf("tmove : Activation périodique\n");
 
+        rt_event_wait(&evCoPerdue, 1, NULL, EV_ALL, TM_INFINITE);
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         status = etatCommRobot;
         rt_mutex_release(&mutexEtat);
@@ -149,36 +148,54 @@ void deplacer(void *arg) {
                     break;
             }
             rt_mutex_release(&mutexMove);
-
             status = robot->set_motors(robot, gauche, droite);
+
+            // peut etre faire else compteur++ ;
             rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
+
             if (status != STATUS_OK) {
-                //On test la reception 
-
-
-                if (compteur_erreur_recep < 3) {
-                    compteur_erreur_recep++;
-
-                } else {
-                    compteur_erreur_recep = 0;
-                    rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-                    etatCommRobot = status;
-                    rt_mutex_release(&mutexEtat);
-
-                    message = d_new_message();
-                    message->put_state(message, status);
-
-                    rt_printf("tmove : Envoi message\n");
-                    if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
-                        message->free(message);
-                    }
-
-                }
+                //On test la reception
+                compteur_erreur_recep++;
             } else {
                 compteur_erreur_recep = 0;
             }
+
             rt_mutex_release(&mutexCompteurRecep);
         }
+    }
+}
+
+void connexion_perdue(void *arg) {
+    DMessage *message;
+
+    //rt_printf("tmove : Debut de l'éxecution de periodique à 1s\n");
+    rt_task_set_periodic(NULL, TM_NOW, 1000000);
+
+    while (1) {
+        /* Attente de l'activation périodique */
+        rt_task_wait_period(NULL);
+        //rt_printf("tmove : Activation périodique\n");
+
+        rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
+
+        if (compteur_erreur_recep > 4) { //valeur dépendant du robot, peut etre plus  
+
+            rt_mutex_acquire(&mutexInitConnexion, TM_INFINITE);
+            initConnexion = 0;
+            rt_mutex_release(&mutexInitConnexion);
+            rt_event_clear(&evCoPerdue, 1, NULL);
+            message = d_new_message();
+            rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+            etatCommRobot = 1;
+            message->put_state(message, etatCommRobot);
+            rt_mutex_release(&mutexEtat);
+            compteur_erreur_recep = 0;
+
+            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                message->free(message);
+            }
+        }
+        rt_mutex_release(&mutexCompteurRecep);
     }
 }
 
