@@ -76,7 +76,7 @@ void communiquer(void *arg) {
         printf("tserver : Connexion\n");
 
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-        etatCommMoniteur = 0;
+        etatCommMoniteur = STATUS_OK;
         rt_mutex_release(&mutexEtat);
         int var1 = 1;
         while (var1 > 0) {
@@ -157,9 +157,9 @@ void deplacer(void *arg) {
                     break;
             }
             rt_mutex_release(&mutexMove);
-           // rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
+            // rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
             status = robot->set_motors(robot, gauche, droite); // on ajoute mutex
-           // rt_mutex_release(&mutexComRobot);
+            // rt_mutex_release(&mutexComRobot);
             // peut etre faire else compteur++ ;
             rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
 
@@ -249,11 +249,11 @@ void battery(void * arg) {
         rt_mutex_release(&mutexEtat);
         rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
         if (status == STATUS_OK) {
-          //  rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
+            //  rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
             status = robot->get_vbat(robot, &niveau_batterie);
             d_battery_set_level(battery, niveau_batterie);
 
-          //  rt_mutex_release(&mutexComRobot);
+            //  rt_mutex_release(&mutexComRobot);
 
             if (status != STATUS_OK) {
                 compteur_erreur_recep++;
@@ -297,9 +297,9 @@ void watchdog(void *arg) {
         comMoniteur = etatCommMoniteur;
         rt_mutex_release(&mutexEtat);
         if ((comRobot + comMoniteur) == 0) {
-           // rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
+            // rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
             status = robot->reload_wdt(robot); //ajout mutex
-           // rt_mutex_release(&mutexComRobot);
+            // rt_mutex_release(&mutexComRobot);
             printf("REGARDER ICI : reload watchdog\n");
             rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
             if (status != STATUS_OK) {
@@ -313,7 +313,10 @@ void watchdog(void *arg) {
 }
 
 void th_arene(void *arg) {
+
     int comMoniteur;
+    long useless;
+    rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
     DImage *image = d_new_image();
     rt_mutex_acquire(&mutexEtat, TM_INFINITE);
     comMoniteur = etatCommMoniteur;
@@ -328,33 +331,43 @@ void th_arene(void *arg) {
 }
 
 void photo(void *arg) {
-    DImage* image = d_new_image();
-    DJpegimage *jpegImage = d_new_jpegimage();
+    DImage* image;
+    DJpegimage *jpegImage;
     camera->open(camera);
     DMessage *message;
     int comMoniteur;
-    rt_printf("tphoto : Debut de l'éxecution de periodique à 600ms\n");
+    long useless;
+    printf("tphoto : Debut de l'éxecution de periodique à 600ms\n");
     rt_task_set_periodic(NULL, TM_NOW, 600000000);
 
     while (1) {
+        //rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
         rt_task_wait_period(NULL);
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         comMoniteur = etatCommMoniteur;
         rt_mutex_release(&mutexEtat);
 
         if (comMoniteur == STATUS_OK) {
-            rt_sem_p(&semPhoto, TM_INFINITE);
+            printf("tphoto : p1\n");
+            //rt_sem_p(&semPhoto, TM_INFINITE);
             rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
+            image = d_new_image();
+            printf("tphoto : p2\n");
             camera->get_frame(camera, image);
+            printf("tphoto : p3\n");
             if (arene != NULL) {
                 d_imageshop_draw_arena(image, arene);
+                printf("tphoto : p4\n");
             }
             if (continuCalcul == 1) {
                 rt_mutex_acquire(&mutexPosition, TM_INFINITE);
+                printf("tphoto : p5\n");
                 position = image->compute_robot_position(image, arene);
+                printf("tphoto : p6\n");
                 if (position != NULL) {
                     d_imageshop_draw_position(image, position);
                 }
+                printf("tphoto : p7\n");
                 message = d_new_message();
                 message->put_position(message, position);
                 rt_mutex_release(&mutexPosition);
@@ -363,16 +376,20 @@ void photo(void *arg) {
                     message->free(message);
                 }
             }
+
+            printf("tphoto : p8\n");
+            jpegImage = d_new_jpegimage();
+            jpegImage->compress(jpegImage, image);
+            message = d_new_message();
+            message->put_jpeg_image(message, jpegImage);
+            rt_printf("tphoto : Envoi jpeg\n");
+            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                message->free(message);
+            }
+            rt_mutex_release(&mutexAreneCam);
+            //rt_sem_v(&semPhoto);
         }
-        jpegImage->compress(jpegImage, image);
-        message = d_new_message();
-        message->put_jpeg_image(message, jpegImage);
-        rt_printf("tphoto : Envoi jpeg\n");
-        if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
-            message->free(message);
-        }
-        rt_mutex_release(&mutexAreneCam);
-        rt_sem_v(&semPhoto);
     }
+
 
 }
