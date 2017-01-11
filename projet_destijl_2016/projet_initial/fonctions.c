@@ -194,3 +194,36 @@ int write_in_queue(RT_QUEUE *msgQueue, void * data, int size) {
 
     return err;
 }
+
+
+void battery(void * arg){
+    int compteur_erreur_recep;
+    int status;
+    DMessage *message;
+    
+    rt_printf("tbattery : Attente du sémarphore semConnecterRobot\n");
+    rt_sem_p(&semConnecterRobot, TM_INFINITE);
+    rt_printf("tbattery : On a le sémaphore de la Connexion on test la batterie\n");
+    
+    
+    rt_printf("tbattery : Debut de l'éxecution de periodique à 250ms\n");
+    rt_task_set_periodic(NULL, TM_NOW, 250000000);
+    while(1){
+    /* Attente de l'activation périodique */
+    rt_task_wait_period(NULL);
+    rt_printf("tbattery : Activation périodique\n");
+    
+    /*On test si le robot est pas deco*/
+    rt_printf("tbattery : Attente du sémarphore semCoPerdue\n");
+    rt_sem_p(&semCoPerdue, TM_INFINITE);
+    rt_printf("tbattery : On a le sémaphore de la Connexion on test la batterie\n");
+    
+    
+    /*On vérifie le status de la Co Robot*/
+    rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+    status = etatCommRobot;
+    rt_mutex_release(&mutexEtat);
+
+    
+    }
+}
