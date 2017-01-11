@@ -14,23 +14,34 @@ RT_TASK tenvoyer;
 RT_TASK tbattery;
 RT_TASK tcoperdue;
 RT_TASK twatchdog;
+RT_TASK tarena;
 
 RT_MUTEX mutexEtat;
 RT_MUTEX mutexCompteurRecep;
 RT_MUTEX mutexMove;
 RT_MUTEX mutexInitConnexion;
+RT_MUTEX mutexAreneCam;
+RT_MUTEX mutexPosition;
+//RT_MUTEX mutexComRobot;
+
 RT_EVENT evCoPerdue;
+
 RT_SEM semConnecterRobot;
+RT_SEM semArene;
+RT_SEM semPhoto;
 
 RT_QUEUE queueMsgGUI;
 int compteur_erreur_recep = 0;
 int etatCommMoniteur = 1;
 int etatCommRobot = 1;
 int initConnexion = 0;
+int continuCalcul;
+DPosition *position;
 DRobot *robot;
 DMovement *move;
 DServer *serveur;
-
+DArena *arene;
+DCamera *camera;
 
 int MSG_QUEUE_SIZE = 10;
 
@@ -41,4 +52,5 @@ int PRIORITY_TENVOYER = 25;
 int PRIORITY_TBATTERY = 5;
 int PRIORITY_TWATCHDOG = 27;
 int PRIORITY_TCOPERDUE = 23;
+int PRIORITY_TARENE= 15;
 /*mettre une haute prio au watchdog ex=27 prio pour connexion perdu = 23 */

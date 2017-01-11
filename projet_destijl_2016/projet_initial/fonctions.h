@@ -21,6 +21,8 @@ extern "C" {
         void battery(void *arg);
         void watchdog(void *arg);
         void connexion_perdue(void *arg);
+        void th_arene(void *arg);
+        void photo (void *arg);
 #ifdef	__cplusplus
 }
 #endif
