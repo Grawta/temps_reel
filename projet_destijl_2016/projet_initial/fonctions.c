@@ -149,7 +149,7 @@ void deplacer(void *arg) {
             rt_mutex_release(&mutexMove);
 
             status = robot->set_motors(robot, gauche, droite);
-            rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+            rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
             if (status != STATUS_OK) {
                 //On test la reception 
 
@@ -175,7 +175,7 @@ void deplacer(void *arg) {
             } else {
                 compteur_erreur_recep = 0;
             }
-            rt_mutex_release(&mutexEtat);
+            rt_mutex_release(&mutexCompteurRecep);
         }
     }
 }
