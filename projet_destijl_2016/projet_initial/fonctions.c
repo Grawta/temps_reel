@@ -329,7 +329,7 @@ void th_arene(void *arg) {
 
 void photo(void *arg) {
     DImage* image = d_new_image();
-    DJpegimage *jpegImage;
+    DJpegimage *jpegImage = d_new_jpegimage();
     camera->open(camera);
     DMessage *message;
     int comMoniteur;
