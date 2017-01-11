@@ -76,10 +76,6 @@ void initStruct(void) {
         rt_printf("Error semaphore create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_sem_create(&semCoPerdue, NULL, 0, S_FIFO)) {
-        rt_printf("Error semaphore create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
    /* Creation de l'event */
     if (err = rt_event_create(&evCoPerdue, "", 0, EV_FIFO)) {
         rt_printf("Error event create: %s\n", strerror(-err));
@@ -104,6 +100,14 @@ void initStruct(void) {
     }
     /*Thread battery cree*/
      if (err = rt_task_create(&tbattery, NULL, 0, PRIORITY_TBATTERY, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&twatchdog, NULL, 0, PRIORITY_TWATCHDOG, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&tcoperdue, NULL, 0, PRIORITY_TCOPERDUE, 0)) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
@@ -143,6 +147,14 @@ void startTasks() {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_start(&twatchdog, &watchdog, NULL)) {
+        rt_printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&tcoperdue, &connexion_perdue, NULL)) {
+        rt_printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
 
 }
 
@@ -151,4 +163,6 @@ void deleteTasks() {
     rt_task_delete(&tconnect);
     rt_task_delete(&tmove);
     rt_task_delete(&tbattery);
+    rt_task_delete(&twatchdog);
+    rt_task_delete(&tcoperdue);
 }

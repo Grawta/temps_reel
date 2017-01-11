@@ -16,6 +16,8 @@ extern RT_TASK tconnect;
 extern RT_TASK tmove;
 extern RT_TASK tenvoyer;
 extern RT_TASK tbattery;
+extern RT_TASK tcoperdue;
+extern RT_TASK twatchdog;
 
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
@@ -25,7 +27,7 @@ extern RT_MUTEX mutexInitConnexion;
 
 /* @descripteurs des sempahore */
 extern RT_SEM semConnecterRobot;
-extern RT_SEM semCoPerdue;
+/*descripteur evenement*/
 extern RT_EVENT evCoPerdue;
 /* @descripteurs des files de messages */
 extern RT_QUEUE queueMsgGUI;
@@ -46,6 +48,8 @@ extern int PRIORITY_TCONNECT;
 extern int PRIORITY_TMOVE;
 extern int PRIORITY_TENVOYER;
 extern int PRIORITY_TBATTERY;
+extern int PRIORITY_TWATCHDOG;
+extern int PRIORITY_TCOPERDUE;
 
 #endif	/* GLOBAL_H */
 
