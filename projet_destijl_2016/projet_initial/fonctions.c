@@ -22,7 +22,7 @@ void envoyer(void * arg) {
 void connecter(void * arg) {
     int status;
     DMessage *message;
-
+    long *mask = 1;
     rt_printf("tconnect : Debut de l'exécution de tconnect\n");
 
     while (1) {
@@ -51,6 +51,10 @@ void connecter(void * arg) {
         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
             message->free(message);
         }
+        rt_event_signal(&evCoPerdue,&mask);
+        rt_mutex_acquire(&mutexInitConnexion,TM_INFINITE);
+        initConnexion = 1;
+        rt_mutex_release(&mutexInitConnexion);
     }
 }
 
@@ -107,7 +111,6 @@ void deplacer(void *arg) {
     int status = 1;
     int gauche;
     int droite;
-    int compteur_erreur_recep;
     DMessage *message;
 
     rt_printf("tmove : Debut de l'éxecution de periodique à 1s\n");
@@ -197,33 +200,45 @@ int write_in_queue(RT_QUEUE *msgQueue, void * data, int size) {
 
 
 void battery(void * arg){
-    int compteur_erreur_recep;
     int status;
     DMessage *message;
-    
-    rt_printf("tbattery : Attente du sémarphore semConnecterRobot\n");
-    rt_sem_p(&semConnecterRobot, TM_INFINITE);
-    rt_printf("tbattery : On a le sémaphore de la Connexion on test la batterie\n");
-    
-    
+    DBattery *battery;
+    battery = d_new_battery();
     rt_printf("tbattery : Debut de l'éxecution de periodique à 250ms\n");
     rt_task_set_periodic(NULL, TM_NOW, 250000000);
     while(1){
     /* Attente de l'activation périodique */
     rt_task_wait_period(NULL);
     rt_printf("tbattery : Activation périodique\n");
-    
+    /*IL FAUT QUON IMPLEMENTE LES EVENT ICI A LA PLACE DU SEMAPHORE*/
+    rt_event_wait(&evCoPerdue,1,NULL,EV_ALL,TM_INFINITE);
     /*On test si le robot est pas deco*/
-    rt_printf("tbattery : Attente du sémarphore semCoPerdue\n");
+    /*rt_printf("tbattery : Attente du sémarphore semCoPerdue\n");
     rt_sem_p(&semCoPerdue, TM_INFINITE);
-    rt_printf("tbattery : On a le sémaphore de la Connexion on test la batterie\n");
+    rt_printf("tbattery : On a le sémaphore de la Connexion on test la batterie\n");*/
     
     
     /*On vérifie le status de la Co Robot*/
     rt_mutex_acquire(&mutexEtat, TM_INFINITE);
     status = etatCommRobot;
     rt_mutex_release(&mutexEtat);
-
-    
+    rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
+    if (status == STATUS_OK){
+        status = d_battery_get_level(battery);
+        if(status != STATUS_OK){         
+            compteur_erreur_recep++;         
+        }else{
+            message = d_new_message();
+            message->put_state(message, status);
+            rt_printf("tmove : Envoi message\n");
+            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                 message->free(message);
+            }
+            compteur_erreur_recep = 0;
+        }
+    }else{        
+            compteur_erreur_recep++;
+    }
+     rt_mutex_release(&mutexCompteurRecep);
     }
 }

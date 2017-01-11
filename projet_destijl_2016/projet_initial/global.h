@@ -21,11 +21,12 @@ extern RT_TASK tbattery;
 extern RT_MUTEX mutexEtat;
 extern RT_MUTEX mutexMove;
 extern RT_MUTEX mutexCompteurRecep;
+extern RT_MUTEX mutexInitConnexion;
 
 /* @descripteurs des sempahore */
 extern RT_SEM semConnecterRobot;
 extern RT_SEM semCoPerdue;
-
+extern RT_EVENT evCoPerdue;
 /* @descripteurs des files de messages */
 extern RT_QUEUE queueMsgGUI;
 
@@ -33,6 +34,7 @@ extern RT_QUEUE queueMsgGUI;
 extern int etatCommMoniteur;
 extern int compteur_erreur_recep;
 extern int etatCommRobot;
+extern int initConnexion;
 extern DServer *serveur;
 extern DRobot *robot;
 extern DMovement *move;

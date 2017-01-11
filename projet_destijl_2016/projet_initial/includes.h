@@ -18,6 +18,7 @@
 #include <sys/mman.h>
 #include <native/timer.h>
 #include <native/queue.h>
+#include <native/event.h>
 
 #include <rtdk.h>
 #include <syslog.h>
