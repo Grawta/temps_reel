@@ -339,12 +339,16 @@ void th_arene(void *arg) {
 
     int comMoniteur;
     long useless;
-    //rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
+    rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
     DImage *image = d_new_image();
-    rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+
+		printf("tarene : avant le while 1= NULL\n");
+		while(1) {
+    rt_mutex_acquire(&mutexEtat, TM_INFINITE);		
     comMoniteur = etatCommMoniteur;
     rt_mutex_release(&mutexEtat);
-
+		
+		printf("tarene : avant le if comoniteur = NULL\n");
     if (comMoniteur == STATUS_OK) {
         rt_sem_p(&semArene, TM_INFINITE);
 				//on prend une frame de la camera
@@ -355,7 +359,13 @@ void th_arene(void *arg) {
         rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
         arene = image->compute_arena_position(image);
         rt_mutex_release(&mutexAreneCam);
+				printf("tarene : avant le if ARENE = NULL\n");
+				if (arene != NULL) {
+							printf("tarene : arene est pas null\n");
+             d_imageshop_draw_arena(image, arene);
+        }
     }
+		}
 }
 
 void photo(void *arg) {
@@ -376,26 +386,16 @@ void photo(void *arg) {
         rt_mutex_release(&mutexEtat);
 
         if (comMoniteur == STATUS_OK) {
-            printf("tphoto : p1\n");
             //rt_sem_p(&semPhoto, TM_INFINITE);
             rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
             image = d_new_image();
-            printf("tphoto : p2\n");
             camera->get_frame(camera, image);
-            printf("tphoto : p3\n");
-            if (arene != NULL) {
-                d_imageshop_draw_arena(image, arene);
-                printf("tphoto : p4\n");
-            }
             if (continuCalcul == 1) {
                 rt_mutex_acquire(&mutexPosition, TM_INFINITE);
-                printf("tphoto : p5\n");
-                position = image->compute_robot_position(image, arene);
-                printf("tphoto : p6\n");
+                position = image->compute_robot_position(image, NULL);
                 if (position != NULL) {
                     d_imageshop_draw_position(image, position);
                 }
-                printf("tphoto : p7\n");
                 message = d_new_message();
                 message->put_position(message, position);
                 rt_mutex_release(&mutexPosition);
@@ -405,7 +405,6 @@ void photo(void *arg) {
                 }
             }
 
-            printf("tphoto : p8\n");
             jpegImage = d_new_jpegimage();
             jpegImage->compress(jpegImage, image);
             message = d_new_message();

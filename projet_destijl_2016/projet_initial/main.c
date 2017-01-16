@@ -206,4 +206,5 @@ void deleteTasks() {
     rt_task_delete(&twatchdog);
     rt_task_delete(&tcoperdue);
     rt_task_delete(&tarena);
+    rt_task_delete(&tphoto);
 }
