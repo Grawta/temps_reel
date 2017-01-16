@@ -95,6 +95,29 @@ void communiquer(void *arg) {
                                 printf("tserver : Action connecter robot\n");
                                 rt_sem_v(&semConnecterRobot);
                                 break;
+                            case ACTION_FIND_ARENA :
+                                printf("tserver : Find Arena");
+                                rt_sem_v(&semArene);
+                                break;
+                            case ACTION_ARENA_IS_FOUND :
+                                printf("tserver : arene trouvée");
+                                break;
+                            case ACTION_ARENA_FAILED :
+                                printf("tserver : On deconnecte l'arene !");
+                                rt_mutex_acquire(&mutexAreneCam,TM_INFINITE);
+                                arene=NULL;
+                                rt_mutex_release(&mutexAreneCam);
+                                break;
+                            case ACTION_COMPUTE_CONTINUOUSLY_POSITION :
+                                rt_mutex_acquire(&mutexPosition,TM_INFINITE);
+                                continuCalcul = 1;
+                                rt_mutex_release(&mutexPosition);
+                                break;
+                            case ACTION_STOP_COMPUTE_POSITION:
+                                rt_mutex_acquire(&mutexPosition,TM_INFINITE);
+                                continuCalcul = 0;
+                                rt_mutex_release(&mutexPosition);
+                                break;
                         }
                         break;
                     case MESSAGE_TYPE_MOVEMENT:
