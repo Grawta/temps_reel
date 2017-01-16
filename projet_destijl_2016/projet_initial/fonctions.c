@@ -96,14 +96,14 @@ void communiquer(void *arg) {
                                 rt_sem_v(&semConnecterRobot);
                                 break;
                             case ACTION_FIND_ARENA :
-                                printf("tserver : Find Arena");
+                                printf("tserver : Find Arena\n");
                                 rt_sem_v(&semArene);
                                 break;
                             case ACTION_ARENA_IS_FOUND :
-                                printf("tserver : arene trouvée");
-                                break;
+                                printf("tserver : arene trouvée\n");
+														    break;
                             case ACTION_ARENA_FAILED :
-                                printf("tserver : On deconnecte l'arene !");
+                                printf("tserver : On deconnecte l'arene !\n");
                                 rt_mutex_acquire(&mutexAreneCam,TM_INFINITE);
                                 arene=NULL;
                                 rt_mutex_release(&mutexAreneCam);
@@ -339,7 +339,7 @@ void th_arene(void *arg) {
 
     int comMoniteur;
     long useless;
-    rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
+    //rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
     DImage *image = d_new_image();
     rt_mutex_acquire(&mutexEtat, TM_INFINITE);
     comMoniteur = etatCommMoniteur;
@@ -347,6 +347,11 @@ void th_arene(void *arg) {
 
     if (comMoniteur == STATUS_OK) {
         rt_sem_p(&semArene, TM_INFINITE);
+				//on prend une frame de la camera
+				rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
+				d_camera_get_frame(camera, image);
+				rt_mutex_release(&mutexAreneCam);
+
         rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
         arene = image->compute_arena_position(image);
         rt_mutex_release(&mutexAreneCam);
