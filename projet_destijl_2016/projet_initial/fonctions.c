@@ -366,13 +366,14 @@ void th_arene(void *arg) {
             }
             if (position != NULL) {
                 d_imageshop_draw_position(image, position);
-            }
-            message = d_new_message();
-            message->put_position(message, position);
-            rt_mutex_release(&mutexPosition);
-            rt_printf("tphoto : Envoi Position\n");
-            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
-                message->free(message);
+                message = d_new_message();
+                message->put_position(message, position);
+                rt_mutex_release(&mutexPosition);
+                rt_printf("tphoto : Envoi Position\n");
+                if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                    message->free(message);
+                }
+
             }
             jpegImage = d_new_jpegimage();
             jpegImage->compress(jpegImage, image);
@@ -414,16 +415,15 @@ void photo(void *arg) {
                 position = image->compute_robot_position(image, NULL);
                 if (position != NULL) {
                     d_imageshop_draw_position(image, position);
-                }
-                message = d_new_message();
-                message->put_position(message, position);
-                rt_mutex_release(&mutexPosition);
-                rt_printf("tphoto : Envoi Position\n");
-                if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
-                    message->free(message);
+                    message = d_new_message();
+                    message->put_position(message, position);
+                    rt_mutex_release(&mutexPosition);
+                    rt_printf("tphoto : Envoi Position\n");
+                    if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                        message->free(message);
+                    }
                 }
             }
-
             jpegImage = d_new_jpegimage();
             jpegImage->compress(jpegImage, image);
             message = d_new_message();
