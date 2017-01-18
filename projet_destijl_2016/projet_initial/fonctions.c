@@ -95,26 +95,26 @@ void communiquer(void *arg) {
                                 printf("tserver : Action connecter robot\n");
                                 rt_sem_v(&semConnecterRobot);
                                 break;
-                            case ACTION_FIND_ARENA :
+                            case ACTION_FIND_ARENA:
                                 printf("tserver : Find Arena\n");
                                 rt_sem_v(&semArene);
                                 break;
-                            case ACTION_ARENA_IS_FOUND :
+                            case ACTION_ARENA_IS_FOUND:
                                 printf("tserver : arene trouvée\n");
-														    break;
-                            case ACTION_ARENA_FAILED :
+                                break;
+                            case ACTION_ARENA_FAILED:
                                 printf("tserver : On deconnecte l'arene !\n");
-                                rt_mutex_acquire(&mutexAreneCam,TM_INFINITE);
-                                arene=NULL;
+                                rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
+                                arene = NULL;
                                 rt_mutex_release(&mutexAreneCam);
                                 break;
-                            case ACTION_COMPUTE_CONTINUOUSLY_POSITION :
-                                rt_mutex_acquire(&mutexPosition,TM_INFINITE);
+                            case ACTION_COMPUTE_CONTINUOUSLY_POSITION:
+                                rt_mutex_acquire(&mutexPosition, TM_INFINITE);
                                 continuCalcul = 1;
                                 rt_mutex_release(&mutexPosition);
                                 break;
                             case ACTION_STOP_COMPUTE_POSITION:
-                                rt_mutex_acquire(&mutexPosition,TM_INFINITE);
+                                rt_mutex_acquire(&mutexPosition, TM_INFINITE);
                                 continuCalcul = 0;
                                 rt_mutex_release(&mutexPosition);
                                 break;
@@ -336,36 +336,56 @@ void watchdog(void *arg) {
 }
 
 void th_arene(void *arg) {
-
+    DMessage *message;
+    DJpegimage *jpegImage;
     int comMoniteur;
     long useless;
     rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
     DImage *image = d_new_image();
 
-		printf("tarene : avant le while 1= NULL\n");
-		while(1) {
-    rt_mutex_acquire(&mutexEtat, TM_INFINITE);		
-    comMoniteur = etatCommMoniteur;
-    rt_mutex_release(&mutexEtat);
-		
-		printf("tarene : avant le if comoniteur = NULL\n");
-    if (comMoniteur == STATUS_OK) {
-        rt_sem_p(&semArene, TM_INFINITE);
-				//on prend une frame de la camera
-				rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
-				d_camera_get_frame(camera, image);
-				rt_mutex_release(&mutexAreneCam);
+    printf("tarene : avant le while 1= NULL\n");
+    while (1) {
+        rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+        comMoniteur = etatCommMoniteur;
+        rt_mutex_release(&mutexEtat);
 
-        rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
-        arene = image->compute_arena_position(image);
-        rt_mutex_release(&mutexAreneCam);
-				printf("tarene : avant le if ARENE = NULL\n");
-				if (arene != NULL) {
-							printf("tarene : arene est pas null\n");
-             d_imageshop_draw_arena(image, arene);
+        printf("tarene : avant le if comoniteur = NULL\n");
+        if (comMoniteur == STATUS_OK) {
+            rt_sem_p(&semArene, TM_INFINITE);
+            //on prend une frame de la camera
+            rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
+            d_camera_get_frame(camera, image);
+            rt_mutex_release(&mutexAreneCam);
+
+            rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
+            arene = image->compute_arena_position(image);
+            printf("tarene : avant le if ARENE = NULL\n");
+            if (arene != NULL) {
+                printf("tarene : arene est pas null\n");
+                d_imageshop_draw_arena(image, arene);
+            }
+            if (position != NULL) {
+                d_imageshop_draw_position(image, position);
+            }
+            message = d_new_message();
+            message->put_position(message, position);
+            rt_mutex_release(&mutexPosition);
+            rt_printf("tphoto : Envoi Position\n");
+            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                message->free(message);
+            }
+            jpegImage = d_new_jpegimage();
+            jpegImage->compress(jpegImage, image);
+            message = d_new_message();
+            message->put_jpeg_image(message, jpegImage);
+            rt_printf("tphoto : Envoi jpeg\n");
+            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                message->free(message);
+            }
+            rt_mutex_release(&mutexAreneCam);
         }
+
     }
-		}
 }
 
 void photo(void *arg) {
@@ -386,7 +406,6 @@ void photo(void *arg) {
         rt_mutex_release(&mutexEtat);
 
         if (comMoniteur == STATUS_OK) {
-            //rt_sem_p(&semPhoto, TM_INFINITE);
             rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
             image = d_new_image();
             camera->get_frame(camera, image);
@@ -414,7 +433,6 @@ void photo(void *arg) {
                 message->free(message);
             }
             rt_mutex_release(&mutexAreneCam);
-            //rt_sem_v(&semPhoto);
         }
     }
 
