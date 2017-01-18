@@ -340,7 +340,6 @@ void th_arene(void *arg) {
     DJpegimage *jpegImage;
     int comMoniteur;
     long useless;
-    rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
     DImage *image = d_new_image();
 
     printf("tarene : avant le while 1= NULL\n");
@@ -364,13 +363,9 @@ void th_arene(void *arg) {
                 printf("tarene : arene est pas null\n");
                 d_imageshop_draw_arena(image, arene);
             }
-            if (position != NULL) {
-                d_imageshop_draw_position(image, position);
-            }
             message = d_new_message();
-            message->put_position(message, position);
-            rt_mutex_release(&mutexPosition);
-            rt_printf("tphoto : Envoi Position\n");
+            message->put_position(message, arene);
+            rt_printf("tphoto : Envoi Arene\n");
             if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
                 message->free(message);
             }
@@ -379,7 +374,7 @@ void th_arene(void *arg) {
             jpegImage->compress(jpegImage, image);
             message = d_new_message();
             message->put_jpeg_image(message, jpegImage);
-            rt_printf("tphoto : Envoi jpeg\n");
+            rt_printf("tphoto : Envoi jpeg Arene\n");
             if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
                 message->free(message);
             }
@@ -400,7 +395,6 @@ void photo(void *arg) {
     rt_task_set_periodic(NULL, TM_NOW, 600000000);
 
     while (1) {
-        //rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
         rt_task_wait_period(NULL);
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         comMoniteur = etatCommMoniteur;
