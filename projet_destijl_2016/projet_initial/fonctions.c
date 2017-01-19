@@ -212,7 +212,7 @@ void connexion_perdue(void *arg) {
 
         rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
         printf("REGARDER ICI : nb erreur est %d\n", compteur_erreur_recep);
-        if (compteur_erreur_recep > 14) { //valeur dépendant du robot, peut etre plus  
+        if (compteur_erreur_recep > 6) { //valeur dépendant du robot, peut etre plus  
 
             rt_mutex_acquire(&mutexInitConnexion, TM_INFINITE);
             initConnexion = 0;
@@ -343,20 +343,15 @@ void th_arene(void *arg) {
     DImage *image = d_new_image();
 
     printf("tarene : avant le while 1= NULL\n");
+    rt_sem_p(&semArene, TM_INFINITE);
     while (1) {
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         comMoniteur = etatCommMoniteur;
         rt_mutex_release(&mutexEtat);
-
-        printf("tarene : avant le if comoniteur = NULL\n");
         if (comMoniteur == STATUS_OK) {
-            rt_sem_p(&semArene, TM_INFINITE);
             //on prend une frame de la camera
             rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
             d_camera_get_frame(camera, image);
-            rt_mutex_release(&mutexAreneCam);
-
-            rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
             arene = image->compute_arena_position(image);
             printf("tarene : avant le if ARENE = NULL\n");
             if (arene != NULL) {
@@ -390,7 +385,6 @@ void photo(void *arg) {
     camera->open(camera);
     DMessage *message;
     int comMoniteur;
-    long useless;
     printf("tphoto : Debut de l'éxecution de periodique à 600ms\n");
     rt_task_set_periodic(NULL, TM_NOW, 600000000);
 
