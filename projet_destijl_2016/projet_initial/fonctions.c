@@ -2,6 +2,7 @@
 
 int write_in_queue(RT_QUEUE *msgQueue, void * data, int size);
 
+/*Le thread envoyer permet d'envoyer les messages du shuttle vers le moniteur*/
 void envoyer(void * arg) {
     DMessage *msg;
     int err;
@@ -17,8 +18,10 @@ void envoyer(void * arg) {
         }
     }
 }
-//Le connecter ne réussit pas à tous les coups on a de la chance avec le robot 07
 
+
+/*Le thread connecter permet d'établir la connexion avec le robot. Il est lancé lorsque l'utilisateur 
+ demande la connexion robot depuis le moniteur*/
 void connecter(void * arg) {
     int status;
     int err;
@@ -53,8 +56,6 @@ void connecter(void * arg) {
             printf("tconnecter : dans le if\n");
         }
         printf("tconnecter : sortie du if\n");
-        //rt_event_bind(&evCoPerdue,"",TM_INFINITE);
-        //printf("tconnecter : après bind\n");
         err = rt_event_signal(&evCoPerdue, 1);
         printf("tconnecter : erreur %d\n", err);
         printf("tconnecter : apres le signal\n");
@@ -65,8 +66,9 @@ void connecter(void * arg) {
 }
 
 
-//reconnexion au serveur si perte de connexion ( var <1)
 
+/*Le thread communiquer permet l'intéraction entre le moniteur et le shuttle
+ il va analyser les messages reçus du moniteur et agir en conséquence*/
 void communiquer(void *arg) {
     DMessage *msg = d_new_message();
     int num_msg = 0;
@@ -133,7 +135,7 @@ void communiquer(void *arg) {
         }
     }
 }
-
+/*Ce thread envoie les instructions de deplacement reçu du moniteur par le shuttle directement vers le robot*/
 void deplacer(void *arg) {
     int status = 1;
     int gauche;
@@ -180,14 +182,9 @@ void deplacer(void *arg) {
                     break;
             }
             rt_mutex_release(&mutexMove);
-            // rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
-            status = robot->set_motors(robot, gauche, droite); // on ajoute mutex
-            // rt_mutex_release(&mutexComRobot);
-            // peut etre faire else compteur++ ;
+            status = robot->set_motors(robot, gauche, droite); 
             rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
-
             if (status != STATUS_OK) {
-                //On test la reception
                 compteur_erreur_recep++;
             } else {
                 compteur_erreur_recep = 0;
@@ -199,6 +196,8 @@ void deplacer(void *arg) {
     }
 }
 
+/*Le thread connexion_perdue permet de determiner l'état de la connexion. Si elle est perdue 
+ le thread va changer le masque de l'event et ainsi stopper les threads du robot le temps que la reconnexion soit relancée*/
 void connexion_perdue(void *arg) {
     DMessage *message;
 
@@ -208,8 +207,6 @@ void connexion_perdue(void *arg) {
     while (1) {
         /* Attente de l'activation périodique */
         rt_task_wait_period(NULL);
-        //printf("tmove : Activation périodique\n");
-
         rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
         printf("REGARDER ICI : nb erreur est %d\n", compteur_erreur_recep);
         if (compteur_erreur_recep > 6) { //valeur dépendant du robot, peut etre plus  
@@ -248,6 +245,8 @@ int write_in_queue(RT_QUEUE *msgQueue, void * data, int size) {
     return err;
 }
 
+
+/*Le thread Battery permet de renvoyer le statut de la batterie du robot. Sa période est de 250ms*/
 void battery(void * arg) {
     int status;
     long useless;
@@ -263,21 +262,14 @@ void battery(void * arg) {
         printf("tbattery : Activation périodique\n");
         /*Event pour savoir si on est bien co*/
         rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
-        //printf("REGARDER ICI : erreur batterie\n");
-
-
         /*On vérifie le status de la Co Robot*/
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         status = etatCommRobot;
         rt_mutex_release(&mutexEtat);
         rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
         if (status == STATUS_OK) {
-            //  rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
             status = robot->get_vbat(robot, &niveau_batterie);
             d_battery_set_level(battery, niveau_batterie);
-
-            //  rt_mutex_release(&mutexComRobot);
-
             if (status != STATUS_OK) {
                 compteur_erreur_recep++;
             } else {
@@ -297,6 +289,7 @@ void battery(void * arg) {
     }
 }
 
+
 void watchdog(void *arg) {
     int comRobot;
     int comMoniteur;
@@ -304,13 +297,12 @@ void watchdog(void *arg) {
     long useless;
     while (1) {
         rt_event_wait(&evCoPerdue, 1, &useless, EV_ALL, TM_INFINITE);
-        //printf("REGARDER ICI : erreur watchdog\n");
+        //On vérifie si la connexion vient d'être faite pour ne pas redefinir tout le temps la périodicité
         rt_mutex_acquire(&mutexInitConnexion, TM_INFINITE);
         if (initConnexion == 1) {
             printf("twatchdog : Debut de l'éxecution de periodique à 1s\n");
             rt_task_set_periodic(NULL, TM_NOW, 1000000000);
             initConnexion = 0;
-
         }
         rt_mutex_release(&mutexInitConnexion);
         /* Attente de l'activation périodique */
@@ -320,10 +312,7 @@ void watchdog(void *arg) {
         comMoniteur = etatCommMoniteur;
         rt_mutex_release(&mutexEtat);
         if ((comRobot + comMoniteur) == 0) {
-            // rt_mutex_acquire(&mutexComRobot, TM_INFINITE);
-            status = robot->reload_wdt(robot); //ajout mutex
-            // rt_mutex_release(&mutexComRobot);
-            printf("REGARDER ICI : reload watchdog\n");
+            status = robot->reload_wdt(robot); 
             rt_mutex_acquire(&mutexCompteurRecep, TM_INFINITE);
             if (status != STATUS_OK) {
                 compteur_erreur_recep++;
@@ -335,6 +324,7 @@ void watchdog(void *arg) {
     }
 }
 
+/*Le thread arene permet de définir la position de l'arene et de la dessiner*/
 void th_arene(void *arg) {
     DMessage *message;
     DJpegimage *jpegImage;
@@ -349,7 +339,6 @@ void th_arene(void *arg) {
         comMoniteur = etatCommMoniteur;
         rt_mutex_release(&mutexEtat);
         if (comMoniteur == STATUS_OK) {
-            //on prend une frame de la camera
             rt_mutex_acquire(&mutexAreneCam, TM_INFINITE);
             d_camera_get_frame(camera, image);
             arene = image->compute_arena_position(image);
@@ -379,6 +368,9 @@ void th_arene(void *arg) {
     }
 }
 
+/*On calcule la position du robot toutes les 600ms a partir de l'image récupérer par la camera on l'affiche ensuite sur l'image du moniteur 
+ * et les coordonnées sont mises a jours en bas du moniteur
+ */
 void photo(void *arg) {
     DImage* image;
     DJpegimage *jpegImage;

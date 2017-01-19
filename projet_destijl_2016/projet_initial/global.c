@@ -55,4 +55,4 @@ int PRIORITY_TWATCHDOG = 27;
 int PRIORITY_TCOPERDUE = 23;
 int PRIORITY_TARENE= 15;
 int PRIORITY_TPHOTO = 14;
-/*mettre une haute prio au watchdog ex=27 prio pour connexion perdu = 23 */
+
